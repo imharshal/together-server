@@ -9,7 +9,20 @@ const io = socket(server);
 const users = {};
 
 const socketToRoom = {};
-
+app.get("/", (req, res) => {
+  res.send({
+    status: "Running",
+  });
+});
+app.get("/meetings", (req, res) => {
+  if (req.query.pass === process.env.PASSWORD)
+    res.send({ meetings: { users } });
+  res.send({
+    status: "failed",
+    message: "Unauthorized request",
+    query: req.query.pass,
+  });
+});
 io.on("connection", (socket) => {
   socket.on("join room", (roomID) => {
     if (users[roomID]) {
