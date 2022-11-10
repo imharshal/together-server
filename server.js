@@ -6,8 +6,7 @@ const server = http.createServer(app);
 const socket = require("socket.io");
 const io = socket(server);
 const port = process.env.PORT || 8000;
-const users = {};
-
+const meetings = {};
 const socketToRoom = {};
 app.get("/", (req, res) => {
   res.send({
@@ -15,37 +14,48 @@ app.get("/", (req, res) => {
   });
 });
 app.get("/meetings", (req, res) => {
-  if (req.query.pass === process.env.PASSWORD)
-    res.send({ meetings: { users } });
-  res.send({
-    status: "failed",
-    message: "Unauthorized request",
-    query: req.query.pass,
-  });
+  if (req.query.pass === process.env.PASSWORD) res.send({ meetings });
+  else
+    res.send({
+      status: "failed",
+      message: "Unauthorized request",
+    });
 });
-io.on("connection", (socket) => {
-  socket.on("join room", (roomID) => {
-    if (users[roomID]) {
-      const length = users[roomID].length;
 
-      users[roomID].push(socket.id);
-    } else {
-      users[roomID] = [socket.id];
-    }
+function getParticipants(roomID) {
+  if (meetings[roomID]) return meetings[roomID]["participants"];
+  return [];
+}
+function addParticipant(roomID, participantID) {
+  if (meetings[roomID]) meetings[roomID]["participants"].push(participantID);
+  else {
+    meetings[roomID] = { participants: [participantID] };
+  }
+}
+
+io.on("connection", (socket) => {
+  socket.on("joinRoom", (roomID) => {
+    addParticipant(roomID, socket.id);
+
     socketToRoom[socket.id] = roomID;
-    const usersInThisRoom = users[roomID].filter((id) => id !== socket.id);
-    socket.emit("all users", usersInThisRoom);
+    const usersInThisRoom = getParticipants(roomID).filter(
+      (id) => id !== socket.id
+    );
+    socket.emit("allUsers", usersInThisRoom);
   });
 
-  socket.on("sending signal", (payload) => {
-    io.to(payload.userToSignal).emit("user joined", {
+  socket.on("requestToJoin", (payload) => {
+    console.log(payload.callerID, " requested to join ");
+
+    io.to(payload.userToSignal).emit("participantJoined", {
       signal: payload.signal,
       callerID: payload.callerID,
     });
   });
 
-  socket.on("returning signal", (payload) => {
-    io.to(payload.callerID).emit("receiving returned signal", {
+  socket.on("allowToJoin", (payload) => {
+    console.log("allowed to join ", payload.id);
+    io.to(payload.callerID).emit("stream", {
       signal: payload.signal,
       id: socket.id,
     });
@@ -53,12 +63,13 @@ io.on("connection", (socket) => {
 
   socket.on("disconnect", () => {
     const roomID = socketToRoom[socket.id];
-    let room = users[roomID];
-    if (room) {
-      room = room.filter((id) => id !== socket.id);
-      users[roomID] = room;
+    let participants = getParticipants(roomID);
+    if (participants) {
+      participants = participants.filter((id) => id !== socket.id);
+      meetings[roomID] = { participants };
     }
+    socket.emit("participantLeft", socket.id);
   });
 });
 
-server.listen(port, () => console.log("server is running on port" + port));
+server.listen(port, () => console.log("server is running on port " + port));
