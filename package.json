@@ -6,16 +6,18 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "nodemon server.js",
-    "start": "node server.js"
+    "start": "node server.js",
+    "dev2": "nodemon draft.js"
   },
   "keywords": [],
   "author": "Harshal Bokade",
   "license": "ISC",
   "dependencies": {
-    "nodemon": "^2.0.20",
     "@types/socket.io": "^3.0.2",
+    "cors": "^2.8.5",
     "dotenv": "^8.2.0",
     "express": "^4.17.1",
-    "socket.io": "^2.3.0"
+    "nodemon": "^2.0.20",
+    "socket.io": "^4.5.3"
   }
 }
