@@ -7,7 +7,9 @@ app.use(cors());
 const server = http.createServer(app);
 const socket = require("socket.io");
 const io = socket(server, {
-  cors: { origin: "*" },
+  cors: {
+    origins: "http://localhost:5173, https://meet-together.netlify.app/",
+  },
 });
 const port = process.env.PORT || 8000;
 const meetings = {};
@@ -50,7 +52,7 @@ io.on("connection", (socket) => {
     });
   });
   socket.on("allowToJoin", (payload) => {
-    console.log("allowed to join ", payload.id, new Date());
+    console.log("allowed to join ", socket.id, new Date());
     if (socket.id)
       io.to(payload.callerID).emit("stream", {
         signal: payload.signal,
