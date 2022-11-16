@@ -32,10 +32,11 @@ io.on("connection", (socket) => {
   console.log("connected", socket.id);
   socket.on("joinRoom", (userDetails) => {
     const { username, roomID, audio, video } = userDetails;
-    socket.username = username;
-    socket.room = roomID;
-    socket.audio = audio;
-    socket.video = video;
+    // socket.username = username;
+    // socket.room = roomID;
+    // socket.audio = audio;
+    // socket.video = video;
+    socket.userDetails;
     socket.join(roomID);
     let participants = io.sockets.adapter.rooms.get(roomID);
 
@@ -49,6 +50,7 @@ io.on("connection", (socket) => {
     io.to(payload.userToSignal).emit("participantJoined", {
       signal: payload.signal,
       callerID: payload.callerID,
+      userDetails: socket.userDetails,
     });
   });
   socket.on("allowToJoin", (payload) => {
@@ -57,9 +59,10 @@ io.on("connection", (socket) => {
       io.to(payload.callerID).emit("stream", {
         signal: payload.signal,
         id: socket.id,
-        username: socket.username,
-        audio: socket.audio,
-        video: socket.video,
+        userDetails: payload.userDetails,
+        // username: socket.username,
+        // audio: socket.audio,
+        // video: socket.video,
       });
   });
   // when the user disconnects.. perform this
