@@ -6,6 +6,7 @@ const app = express();
 app.use(cors());
 const server = http.createServer(app);
 const socket = require("socket.io");
+const { userInfo } = require("os");
 const io = socket(server, {
   cors: {
     origins: "http://localhost:5173, https://meet-together.netlify.app/",
@@ -13,6 +14,7 @@ const io = socket(server, {
 });
 const port = process.env.PORT || 8000;
 const meetings = {};
+const participantInfo = {};
 
 app.get("/", (req, res) => {
   res.send({
@@ -32,17 +34,13 @@ io.on("connection", (socket) => {
   console.log("connected", socket.id);
   socket.on("joinRoom", (userDetails) => {
     const { username, roomID, audio, video } = userDetails;
-    // socket.username = username;
-    // socket.room = roomID;
-    // socket.audio = audio;
-    // socket.video = video;
-    socket.userDetails;
+    participantInfo[socket.id] = userDetails;
     socket.join(roomID);
     let participants = io.sockets.adapter.rooms.get(roomID);
-
+    // console.log(participantInfo)
     participants = Array.from(participants);
-    console.log("from join", participants);
-    socket.emit("allUsers", participants);
+    // console.log("from join", participants);
+    socket.emit("allUsers", participants, participantInfo);
   });
 
   socket.on("requestToJoin", (payload) => {
@@ -50,7 +48,7 @@ io.on("connection", (socket) => {
     io.to(payload.userToSignal).emit("participantJoined", {
       signal: payload.signal,
       callerID: payload.callerID,
-      userDetails: socket.userDetails,
+      userDetails: participantInfo[payload.callerID],
     });
   });
   socket.on("allowToJoin", (payload) => {
@@ -59,10 +57,6 @@ io.on("connection", (socket) => {
       io.to(payload.callerID).emit("stream", {
         signal: payload.signal,
         id: socket.id,
-        userDetails: payload.userDetails,
-        // username: socket.username,
-        // audio: socket.audio,
-        // video: socket.video,
       });
   });
   // when the user disconnects.. perform this
@@ -71,6 +65,7 @@ io.on("connection", (socket) => {
     console.log(socket.id, socket.room);
     console.log("from disconnect", participants);
     io.to(socket.room).emit("participantLeft", socket.id);
+    delete participantInfo[socket.id];
     socket.leave(socket.room);
   });
 });
